@@ -1,0 +1,56 @@
+# Stockora Enterprise .dockerignore
+# Exclude version control, temporary, local environment, and build artifacts
+.git
+.gitignore
+.editorconfig
+.prettierignore
+.prettierrc
+eslint.config.js
+README.md
+docs/
+
+# Dependencies & Build artifacts (rebuilt in container stages)
+node_modules/
+dist/
+dist-ssr/
+coverage/
+.scannerwork/
+bin/
+
+# Environment and secrets - NEVER bake credentials into images
+.env
+.env.*
+!.env.example
+
+# Logs and runtime data
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Test files not needed for production images
+e2e/
+playwright.config.ts
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Infrastructure files not needed inside container image
+k8s/
+terraform/
+
+# Uploads and temporary directories
+uploads/*
+!uploads/.gitkeep
+temp/*
+!temp/.gitkeep
+public/uploads/*
+!public/uploads/.gitkeep
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

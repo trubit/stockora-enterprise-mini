@@ -1,0 +1,22 @@
+name: "Setup Node.js Environment"
+description: "Centralized action to configure Node.js, cache dependencies, and install packages."
+
+inputs:
+  node-version:
+    description: "The Node.js version to configure"
+    required: false
+    default: "22"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "npm"
+
+    - name: Install Dependencies
+      shell: bash
+      run: npm ci
+

@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stockora-client
+  namespace: stockora
+  labels:
+    app.kubernetes.io/name: stockora-client
+    app.kubernetes.io/part-of: stockora-enterprise
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockora-client
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: stockora-client
+        app.kubernetes.io/part-of: stockora-enterprise
+        app.kubernetes.io/component: frontend
+    spec:
+      serviceAccountName: stockora-client-sa
+      terminationGracePeriodSeconds: 15
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: client
+          image: stockora/client:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE
+                - CHOWN
+                - SETGID
+                - SETUID
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: tmp-volume
+              mountPath: /tmp
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: tmp-volume
+          emptyDir: {}

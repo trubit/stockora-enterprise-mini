@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stockora-server-config
+  namespace: stockora
+  labels:
+    app.kubernetes.io/name: stockora-server
+    app.kubernetes.io/part-of: stockora-enterprise
+data:
+  PORT: "8080"
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  CORS_ORIGIN: "https://stockora.enterprise,https://app.stockora.enterprise"
+  SMTP_PORT: "587"
+  EMAIL_FROM: "no-reply@stockora.enterprise"
+  GEMINI_MODEL: "gemini-2.5-flash"
+  GEMINI_ENABLED: "true"

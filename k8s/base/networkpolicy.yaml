@@ -1,0 +1,75 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stockora-client-network-policy
+  namespace: stockora
+  labels:
+    app.kubernetes.io/name: stockora-client-netpol
+    app.kubernetes.io/part-of: stockora-enterprise
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: stockora-client
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow HTTP ingress from Ingress Controllers
+    - ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    # Allow cluster internal DNS resolution
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stockora-server-network-policy
+  namespace: stockora
+  labels:
+    app.kubernetes.io/name: stockora-server-netpol
+    app.kubernetes.io/part-of: stockora-enterprise
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: stockora-server
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow backend ingress on port 8080 from Ingress Controller and internal services
+    - ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # Allow cluster internal DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow MongoDB internal traffic
+    - ports:
+        - protocol: TCP
+          port: 27017
+    # Allow Redis internal traffic
+    - ports:
+        - protocol: TCP
+          port: 6379
+    # Allow outbound HTTPS for third-party integrations (Stripe, Paystack, Cloudinary, AI APIs)
+    - ports:
+        - protocol: TCP
+          port: 443
+    # Allow outbound SMTP for transactional email dispatch
+    - ports:
+        - protocol: TCP
+          port: 587
+        - protocol: TCP
+          port: 465
+        - protocol: TCP
+          port: 25

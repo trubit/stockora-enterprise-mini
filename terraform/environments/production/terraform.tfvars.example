@@ -1,0 +1,24 @@
+# Stockora Enterprise — Production Variable Values Template
+# Copy to terraform.tfvars or pass values via CI/CD secrets (TF_VAR_*)
+# DO NOT COMMIT ACTUAL PASSWORDS TO SOURCE CONTROL
+
+aws_region             = "us-east-1"
+environment            = "production"
+vpc_cidr               = "10.100.0.0/16"
+availability_zones     = ["us-east-1a", "us-east-1b", "us-east-1c"]
+public_subnet_cidrs    = ["10.100.1.0/24", "10.100.2.0/24", "10.100.3.0/24"]
+private_subnet_cidrs   = ["10.100.10.0/24", "10.100.20.0/24", "10.100.30.0/24"]
+
+cluster_version        = "1.29"
+node_instance_types    = ["m6i.large"]
+desired_node_count     = 3
+min_node_count         = 3
+max_node_count         = 10
+
+mongodb_admin_username = "stockora_prod_admin"
+mongodb_admin_password = "REPLACE_WITH_STRONG_GENERATED_PASSWORD_MIN_16_CHARS"
+mongodb_instance_class = "db.r6g.large"
+mongodb_instance_count = 3
+
+redis_node_type        = "cache.m6g.large"
+redis_auth_token       = "REPLACE_WITH_STRONG_AUTH_TOKEN_MIN_32_CHARS"

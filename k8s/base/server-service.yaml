@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: stockora-server
+  namespace: stockora
+  labels:
+    app.kubernetes.io/name: stockora-server
+    app.kubernetes.io/part-of: stockora-enterprise
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: stockora-server

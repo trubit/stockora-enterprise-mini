@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "outDir": "./dist/server",
+    "rootDir": "./",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": false
+  },
+  "include": [
+    "src/server/**/*",
+    "src/shared/**/*",
+    "src/common/**/*",
+    "src/config/**/*"
+  ]
+}

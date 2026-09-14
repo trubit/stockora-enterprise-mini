@@ -1,0 +1,426 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css');
+
+:root {
+  font-family:
+    'Plus Jakarta Sans',
+    'Inter',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: #f8fafc;
+  background-color: #040711;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Stockora Enterprise Mini "Pro Max" Theme Tokens */
+  --bg-primary: #040711;
+  --bg-secondary: #090f1d;
+  --bg-tertiary: #0f182b;
+  --primary: #10b981;
+  --primary-light: #34d399;
+  --primary-dark: #059669;
+  --accent-cyan: #06b6d4;
+  --accent-cyan-light: #22d3ee;
+  --border-glow: rgba(16, 185, 129, 0.16);
+  --border-glow-hover: rgba(52, 211, 153, 0.45);
+  --glass-bg: rgba(9, 15, 29, 0.82);
+  --transition-smooth: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  --primary-glow: rgba(16, 185, 129, 0.25);
+  --cyan-glow: rgba(6, 182, 212, 0.22);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 42%),
+    radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 45%),
+    radial-gradient(at 50% 100%, rgba(5, 150, 105, 0.07) 0px, transparent 50%);
+  overflow-x: hidden;
+  color: #f8fafc;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Responsive Table Container Utilities */
+.table-responsive-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar for category pills / tabs */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom Pro Max Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #152238;
+  border-radius: 99px;
+  border: 1px solid transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #10b981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+}
+
+/* Premium Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(16, 185, 129, 0.4);
+    border-color: rgba(52, 211, 153, 0.5);
+  }
+}
+
+@keyframes slideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes rippleGlow {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(16, 185, 129, 0.4),
+      0 0 0 4px rgba(16, 185, 129, 0.2);
+  }
+  100% {
+    box-shadow:
+      0 0 0 6px rgba(16, 185, 129, 0),
+      0 0 0 12px rgba(16, 185, 129, 0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-right {
+  animation: slideRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Pro Max Glassmorphism Panel styles */
+.glass-panel {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--border-glow) !important;
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  transition: var(--transition-smooth) !important;
+}
+
+.glass-panel:hover {
+  border-color: var(--border-glow-hover) !important;
+  box-shadow: 0 16px 48px 0 rgba(16, 185, 129, 0.22) !important;
+}
+
+/* Glow Card Accents */
+.glow-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.glow-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #34d399 0%, #10b981 50%, #06b6d4 100%);
+  opacity: 0.9;
+}
+
+.glow-card-emerald::before {
+  background: linear-gradient(90deg, #34d399 0%, #10b981 100%);
+}
+
+.glow-card-sky::before {
+  background: linear-gradient(90deg, #22d3ee 0%, #06b6d4 100%);
+}
+
+.glow-card-error::before {
+  background: linear-gradient(90deg, #fb7185 0%, #f43f5e 100%);
+}
+
+/* Pro Max Gradient text utilities */
+.gradient-text {
+  background: linear-gradient(135deg, #a7f3d0 0%, #34d399 50%, #059669 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.emerald-gradient-text {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.cyan-gradient-text {
+  background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand-gradient {
+  background: linear-gradient(135deg, #34d399 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Pro Max Navigation & Sidebar */
+.premium-sidebar-item {
+  border-radius: 8px !important;
+  margin: 4px 8px !important;
+  transition: var(--transition-smooth) !important;
+}
+
+.premium-sidebar-item.active {
+  background: linear-gradient(
+    90deg,
+    rgba(16, 185, 129, 0.18) 0%,
+    rgba(6, 182, 212, 0.05) 100%
+  ) !important;
+  border-left: 3px solid #10b981 !important;
+  box-shadow: inset 1px 0 12px rgba(16, 185, 129, 0.15) !important;
+}
+
+/* Pro Max Pill & Status Indicators */
+.pro-max-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+}
+
+.pulsing-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #10b981;
+  border-radius: 50%;
+  animation: rippleGlow 1.8s infinite ease-in-out;
+}
+
+.pulsing-dot-offline {
+  background-color: #f43f5e;
+  animation: rippleGlow 1.8s infinite ease-in-out;
+  animation-delay: 0.5s;
+}
+
+/* Mini Typography Heading Rules */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-heading {
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif !important;
+  letter-spacing: -0.02em;
+}
+
+/* Bento Grid System for Stockora Enterprise Mini */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+}
+
+.bento-card {
+  background: rgba(9, 15, 29, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(16, 185, 129, 0.14);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bento-card:hover {
+  border-color: rgba(52, 211, 153, 0.38);
+  box-shadow: 0 12px 36px rgba(16, 185, 129, 0.12);
+  transform: translateY(-2px);
+}
+
+.bento-card-highlight {
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 182, 212, 0.04) 100%),
+    rgba(9, 15, 29, 0.85);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.mini-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(6, 182, 212, 0.18) 100%);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
+}
+
+/* ==========================================================================
+   GLOBAL PRINT ENGINE RESETS FOR POS INVOICES & RECEIPTS
+   ========================================================================== */
+@media print {
+  @page {
+    margin: 4mm 6mm;
+    size: auto;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    font-size: 12px !important;
+  }
+
+  /* When printing, hide all non-receipt elements */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show only printable receipt containers */
+  #printable-pos-receipt,
+  #printable-pos-receipt *,
+  #printable-receipt,
+  #printable-receipt * {
+    visibility: visible !important;
+  }
+
+  #printable-pos-receipt,
+  #printable-receipt {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 400px !important;
+    margin: 0 auto !important;
+    padding: 8px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Flatten MUI Dialog overlays to avoid clipping */
+  .MuiDialog-root,
+  .MuiDialog-container,
+  .MuiDialog-paper,
+  .MuiDialogContent-root {
+    position: static !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .MuiBackdrop-root,
+  .MuiDialogActions-root,
+  .no-print {
+    display: none !important;
+  }
+}

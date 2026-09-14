@@ -1,0 +1,24 @@
+# Stockora Enterprise — Staging Variable Values Template
+# Copy to terraform.tfvars or pass via TF_VAR_*
+# DO NOT COMMIT ACTUAL PASSWORDS TO SOURCE CONTROL
+
+aws_region             = "us-east-1"
+environment            = "staging"
+vpc_cidr               = "10.50.0.0/16"
+availability_zones     = ["us-east-1a", "us-east-1b"]
+public_subnet_cidrs    = ["10.50.1.0/24", "10.50.2.0/24"]
+private_subnet_cidrs   = ["10.50.10.0/24", "10.50.20.0/24"]
+
+cluster_version        = "1.29"
+node_instance_types    = ["t3.medium"]
+desired_node_count     = 2
+min_node_count         = 1
+max_node_count         = 4
+
+mongodb_admin_username = "stockora_staging_admin"
+mongodb_admin_password = "REPLACE_WITH_STRONG_STAGING_PASSWORD"
+mongodb_instance_class = "db.t4g.medium"
+mongodb_instance_count = 1
+
+redis_node_type        = "cache.t4g.micro"
+redis_auth_token       = "REPLACE_WITH_STRONG_STAGING_AUTH_TOKEN"

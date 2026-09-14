@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stockora Enterprise Mini — High-Performance Retail &amp; Inventory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      (function() {
+        function shouldSuppress(msg, source) {
+          if (!msg) return false;
+          var str = String(msg).toLowerCase();
+          var src = String(source || '').toLowerCase();
+          return (
+            str.indexOf('starttime') !== -1 ||
+            str.indexOf('reportallchanges') !== -1 ||
+            src.indexOf('<anonymous>') !== -1 ||
+            /^vm\d+/i.test(src)
+          );
+        }
+        window.onerror = function(msg, url, line, col, error) {
+          if (shouldSuppress(msg, url) || (error && shouldSuppress(error.message, url))) {
+            return true;
+          }
+        };
+        window.addEventListener(
+          'error',
+          function(e) {
+            var msg = e.message || (e.error && e.error.message) || '';
+            if (shouldSuppress(msg, e.filename)) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          },
+          true
+        );
+        window.addEventListener(
+          'unhandledrejection',
+          function(e) {
+            var reason = e.reason ? (e.reason.message || String(e.reason)) : '';
+            if (shouldSuppress(reason)) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          },
+          true
+        );
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/client/main.tsx"></script>
+  </body>
+</html>

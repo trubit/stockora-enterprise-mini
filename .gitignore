@@ -1,0 +1,60 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+*.local
+
+# Secrets and Environment — NEVER commit .env (only .env.example is committed)
+.env
+# NOTE: .env.example is intentionally NOT gitignored — it is the safe template
+
+# Local storage and file uploads (exclude runtime contents, preserve placeholders)
+uploads/*
+!uploads/.gitkeep
+temp/*
+!temp/.gitkeep
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local tools and binaries
+bin/
+
+# Test coverage
+coverage/
+*.lcov
+
+# SonarQube scanner work directory
+.scannerwork/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!*.tfvars.example
+*.tfplan
+.terraform/
+.terraform.lock.hcl

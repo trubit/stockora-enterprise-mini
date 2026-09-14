@@ -1,0 +1,30 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: stockora-workload-role
+  namespace: stockora
+  labels:
+    app.kubernetes.io/name: stockora-workload-role
+    app.kubernetes.io/part-of: stockora-enterprise
+rules:
+  # Stockora applications do not need cluster management privileges; allow ConfigMap read for dynamic reload
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "watch", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: stockora-server-rolebinding
+  namespace: stockora
+  labels:
+    app.kubernetes.io/name: stockora-server-rolebinding
+    app.kubernetes.io/part-of: stockora-enterprise
+subjects:
+  - kind: ServiceAccount
+    name: stockora-server-sa
+    namespace: stockora
+roleRef:
+  kind: Role
+  name: stockora-workload-role
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,27 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: stockora-server-pdb
+  namespace: stockora
+  labels:
+    app.kubernetes.io/name: stockora-server-pdb
+    app.kubernetes.io/part-of: stockora-enterprise
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockora-server
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: stockora-client-pdb
+  namespace: stockora
+  labels:
+    app.kubernetes.io/name: stockora-client-pdb
+    app.kubernetes.io/part-of: stockora-enterprise
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stockora-client

@@ -1,0 +1,89 @@
+name: Stockora Enterprise Deployment Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target Environment to Deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+      image_tag:
+        description: "Docker Image Tag to Deploy (e.g. v1.0.0 or commit SHA)"
+        required: true
+        default: "1.0.0"
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    name: Deploy to Kubernetes (${{ github.event.inputs.environment }})
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.29.1"
+
+      - name: Setup Kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          mkdir -p $HOME/.kube
+          echo "$KUBE_CONFIG_DATA" | base64 --decode > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Set Target Namespace and Prefix
+        id: vars
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "production" ]; then
+            echo "namespace=stockora-production" >> $GITHUB_OUTPUT
+            echo "prefix=prod-" >> $GITHUB_OUTPUT
+          else
+            echo "namespace=stockora-staging" >> $GITHUB_OUTPUT
+            echo "prefix=staging-" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Apply Kubernetes Manifests via Kustomize
+        run: |
+          kubectl apply -k k8s/overlays/${{ github.event.inputs.environment }}
+
+      - name: Verify Backend Rollout
+        run: |
+          kubectl rollout status deployment/${{ steps.vars.outputs.prefix }}stockora-server \
+            -n ${{ steps.vars.outputs.namespace }} \
+            --timeout=300s
+
+      - name: Verify Frontend Rollout
+        run: |
+          kubectl rollout status deployment/${{ steps.vars.outputs.prefix }}stockora-client \
+            -n ${{ steps.vars.outputs.namespace }} \
+            --timeout=180s
+
+      - name: Post-Deployment Health Verification
+        run: |
+          echo "Waiting for pod endpoints to become fully ready..."
+          sleep 10
+          # Verify health status through internal service port-forward or ingress probe
+          kubectl run health-checker --rm -i --restart=Never \
+            --image=curlimages/curl:8.5.0 \
+            -n ${{ steps.vars.outputs.namespace }} \
+            -- curl --fail --silent --show-error http://${{ steps.vars.outputs.prefix }}stockora-server:8080/api/v1/health
+
+      - name: Automated Rollback on Deployment Failure
+        if: failure()
+        run: |
+          echo "Deployment or health check failed! Triggering automatic rollout undo..."
+          kubectl rollout undo deployment/${{ steps.vars.outputs.prefix }}stockora-server -n ${{ steps.vars.outputs.namespace }} || true
+          kubectl rollout undo deployment/${{ steps.vars.outputs.prefix }}stockora-client -n ${{ steps.vars.outputs.namespace }} || true
+          exit 1
