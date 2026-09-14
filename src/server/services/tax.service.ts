@@ -145,7 +145,7 @@ export class TaxService {
       taxType: 'EXEMPT',
       isTaxInclusive: false,
       isExempt: true,
-      exemptionReason: 'Zero-Tax Enterprise Architecture Policy',
+      exemptionReason: exemptionReason || 'Zero-Tax Enterprise Architecture Policy',
       lineItems: calculatedLines,
     };
   }

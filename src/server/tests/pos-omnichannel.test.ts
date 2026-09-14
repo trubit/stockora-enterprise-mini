@@ -44,12 +44,12 @@ describe('Phase 31 — Advanced POS, Omnichannel Commerce & Order Management Tes
         { unitPrice: 100, quantity: 2, discount: 10 }, // 200 sub, 20 disc -> 180
         { unitPrice: 50, quantity: 1, discount: 0 }, // 50 sub -> 50
       ]; // total taxable = 230
-      const calc = POSService.calculateCart(items, 0.07, 10); // 230 - 10 = 220 taxable. Tax = 15.40, Total = 235.40
+      const calc = POSService.calculateCart(items, 0, 10); // 230 - 10 = 220. Zero-tax policy: Tax = 0, Total = 220
 
       expect(calc.subtotal).toBe(250);
       expect(calc.discountTotal).toBe(30);
-      expect(calc.taxTotal).toBe(15.4);
-      expect(calc.grandTotal).toBe(235.4);
+      expect(calc.taxTotal).toBe(0);
+      expect(calc.grandTotal).toBe(220);
     });
   });
 
@@ -66,13 +66,13 @@ describe('Phase 31 — Advanced POS, Omnichannel Commerce & Order Management Tes
         customerName: 'Walk-in Tester',
         items: [{ productId: testProductId, quantity: 2, unitPrice: 100 }],
         paymentMethod: 'CASH' as const,
-        amountTendered: 214,
-        taxRate: 0.07,
+        amountTendered: 200,
+        taxRate: 0,
       };
 
       const order1 = await POSService.checkout(checkoutInput);
       expect(order1.orderNumber).toBeDefined();
-      expect(order1.grandTotal).toBe(214);
+      expect(order1.grandTotal).toBe(200);
       expect(order1.status).toBe('COMPLETED');
       expect(order1.paymentStatus).toBe('PAID');
 

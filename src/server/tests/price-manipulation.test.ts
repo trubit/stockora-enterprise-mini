@@ -64,8 +64,8 @@ describe('Price & Plan Manipulation Defense Security Tests', () => {
     });
 
     expect(result.subtotal).toBe(350000);
-    expect(result.tax).toBe(26250);
-    expect(result.amount).toBe(376250);
+    expect(result.tax).toBe(0);
+    expect(result.amount).toBe(350000);
     expect(result.amount).not.toBe(100);
   });
 });

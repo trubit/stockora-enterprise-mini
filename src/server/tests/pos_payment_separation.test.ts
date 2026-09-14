@@ -283,7 +283,7 @@ describe('POS Payment Separation & Architecture Boundary Tests', () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.reference).toBeDefined();
-      expect(res.body.data.amount).toBe(53750);
+      expect(res.body.data.amount).toBe(50000);
       expect(res.body.data.provider).toBe('PAYSTACK');
     });
 

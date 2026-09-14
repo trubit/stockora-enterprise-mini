@@ -472,6 +472,7 @@ export class POSService {
     const address = formatCleanAddress(tenant?.contact, company?.address);
     const phone = tenant?.contact?.phone || company?.phone || '';
     const email = tenant?.contact?.email || company?.email || '';
+    const taxId = tenant?.taxConfig?.taxId || company?.taxId || undefined;
     const headerNotice = tenant?.branding?.receiptHeader || '';
     const footerNotice =
       tenant?.branding?.receiptFooter ||
@@ -486,7 +487,7 @@ export class POSService {
       companyAddress: address,
       companyPhone: phone,
       companyEmail: email,
-      companyTaxId: undefined,
+      companyTaxId: taxId,
       receiptHeader: headerNotice,
       receiptFooter: footerNotice,
       businessName,
@@ -495,7 +496,7 @@ export class POSService {
       address,
       phone,
       email,
-      taxId: undefined,
+      taxId,
       headerNotice,
       header: {
         storeName: businessName,
@@ -504,7 +505,7 @@ export class POSService {
         address,
         phone,
         email,
-        taxId: undefined as string | undefined,
+        taxId,
         headerNotice,
       },
       branchName: 'Central POS Branch',

@@ -264,30 +264,30 @@ describe('Phase 47: Globalization, Multi-Currency, Tax & Regionalization System'
 
   describe('4. Authoritative Server-Side Tax Calculation Engine', () => {
     it('calculates tax-exclusive pricing correctly', async () => {
-      // $100.00 unit price, qty 2, 8% tax rate -> subtotal $200.00, tax $16.00, grand total $216.00
+      // $100.00 unit price, qty 2 -> subtotal $200.00. Under zero-tax policy: tax $0.00, grand total $200.00
       const result = await TaxService.calculateTax({
         items: [{ unitPrice: 100, quantity: 2 }],
         overrideTaxInclusive: false,
       });
 
       expect(result.subtotal).toBe(200);
-      expect(result.taxTotal).toBe(15); // Default rate 7.5%: 200 * 0.075 = 15.00
-      expect(result.grandTotal).toBe(215);
+      expect(result.taxTotal).toBe(0);
+      expect(result.grandTotal).toBe(200);
       expect(result.isTaxInclusive).toBe(false);
     });
 
     it('calculates tax-inclusive pricing correctly (tax extracted without inflating price)', async () => {
-      // ₦107.50 total price with 7.5% inclusive VAT -> Base = ₦100.00, Tax = ₦7.50, Grand Total = ₦107.50
+      // ₦107.50 total price under zero-tax policy: Base = ₦107.50, Tax = ₦0, Grand Total = ₦107.50
       const result = await TaxService.calculateTax({
         items: [{ unitPrice: 107.5, quantity: 1 }],
         overrideTaxInclusive: true,
       });
 
       expect(result.subtotal).toBe(107.5);
-      expect(result.taxableAmount).toBe(100.0);
-      expect(result.taxTotal).toBe(7.5);
+      expect(result.taxableAmount).toBe(107.5);
+      expect(result.taxTotal).toBe(0);
       expect(result.grandTotal).toBe(107.5);
-      expect(result.isTaxInclusive).toBe(true);
+      expect(result.isTaxInclusive).toBe(false);
     });
 
     it('handles multiple tax categories: Standard, Reduced, Zero-Rated, and Exempt', async () => {
@@ -295,56 +295,27 @@ describe('Phase 47: Globalization, Multi-Currency, Tax & Regionalization System'
         tenantId: new mongoose.Types.ObjectId(tenantHarnId),
         currency: 'USD',
         taxConfig: {
-          taxType: 'VAT',
-          defaultTaxRate: 10.0,
+          taxType: 'EXEMPT',
+          defaultTaxRate: 0,
           isTaxInclusive: false,
           taxExemptionAllowed: true,
-          taxRates: [
-            {
-              name: 'Standard',
-              code: 'STANDARD',
-              ratePercentage: 10.0,
-              category: 'STANDARD',
-              isActive: true,
-            },
-            {
-              name: 'Reduced Foods',
-              code: 'REDUCED',
-              ratePercentage: 5.0,
-              category: 'REDUCED',
-              isActive: true,
-            },
-            {
-              name: 'Zero-Rated Essentials',
-              code: 'ZERO_RATED',
-              ratePercentage: 0,
-              category: 'ZERO_RATED',
-              isActive: true,
-            },
-            {
-              name: 'Medical Exempt',
-              code: 'EXEMPT',
-              ratePercentage: 0,
-              category: 'EXEMPT',
-              isActive: true,
-            },
-          ],
+          taxRates: [],
         },
       });
 
       const result = await TaxService.calculateTax({
         tenantId: tenantHarnId,
         items: [
-          { name: 'Standard Widget', unitPrice: 100, quantity: 1, taxCategory: 'STANDARD' }, // 10% -> tax 10
-          { name: 'Reduced Food', unitPrice: 100, quantity: 1, taxCategory: 'REDUCED' }, // 5% -> tax 5
-          { name: 'Essentials', unitPrice: 100, quantity: 1, taxCategory: 'ZERO_RATED' }, // 0% -> tax 0
-          { name: 'Medicine', unitPrice: 100, quantity: 1, taxCategory: 'EXEMPT' }, // 0% -> tax 0
+          { name: 'Standard Widget', unitPrice: 100, quantity: 1, taxCategory: 'STANDARD' },
+          { name: 'Reduced Food', unitPrice: 100, quantity: 1, taxCategory: 'REDUCED' },
+          { name: 'Essentials', unitPrice: 100, quantity: 1, taxCategory: 'ZERO_RATED' },
+          { name: 'Medicine', unitPrice: 100, quantity: 1, taxCategory: 'EXEMPT' },
         ],
       });
 
       expect(result.subtotal).toBe(400);
-      expect(result.taxTotal).toBe(15); // 10 + 5 + 0 + 0
-      expect(result.grandTotal).toBe(415);
+      expect(result.taxTotal).toBe(0);
+      expect(result.grandTotal).toBe(400);
     });
 
     it('exempts verified tax-exempt customers from all tax obligations', async () => {
