@@ -274,11 +274,6 @@ export async function seedUsersIfEmpty(): Promise<void> {
   }
   try {
     const { User } = await import('../models/User.js');
-    const bcrypt = (await import('bcryptjs')).default;
-
-    const salt = await bcrypt.genSalt(10);
-    const adminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Password123!';
-    const passwordHash = await bcrypt.hash(adminPassword, salt);
 
     // STRICT INVARIANT: The ONLY authorized platform superadmin email (configured via environment)
     const solePlatformAdminEmail = config.platformAdminEmail

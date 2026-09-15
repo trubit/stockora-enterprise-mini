@@ -151,6 +151,7 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({ open, onClos
     <Dialog
       open={open}
       onClose={handleClose}
+      disableRestoreFocus
       fullWidth
       maxWidth="sm"
       PaperProps={{

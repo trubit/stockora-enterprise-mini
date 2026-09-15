@@ -30,10 +30,28 @@ import { apiClient } from '../../api/client.ts';
 import { toast } from 'react-hot-toast';
 import { useRegionalSettings } from '../../hooks/useRegionalSettings.js';
 import { CurrencySelector } from '../../components/CurrencySelector.tsx';
+import { useAuthStore } from '../../store/auth.ts';
+import { useTenantStore } from '../../store/tenant.ts';
 
 export default function RegisterSessionManager() {
+  const { user } = useAuthStore();
+  const { activeTenant } = useTenantStore();
   const { formatAmount, currencySymbol, baseCurrency, activeCurrency, convertAmount } =
     useRegionalSettings();
+
+  const [registerId] = useState<string>('REG-MAIN-01');
+  const [registerName] = useState<string>('Main Counter Register');
+
+  const effectiveBranchId =
+    user?.branchId ||
+    (user as any)?.tenants?.[0]?.branchId ||
+    (activeTenant as any)?.branches?.[0]?._id ||
+    activeTenant?.branchId ||
+    'MAIN-BRANCH';
+
+  const effectiveCashierId = user?._id || user?.id || 'CASHIER';
+  const effectiveCashierName = user?.username || user?.email || 'Operator';
+
   const [activeSession, setActiveSession] = useState<any | null>(null);
   const [openingFloat, setOpeningFloat] = useState<number>(200);
   const [movementModalOpen, setMovementModalOpen] = useState(false);
@@ -47,7 +65,7 @@ export default function RegisterSessionManager() {
 
   const fetchActiveSession = async () => {
     try {
-      const { data } = await apiClient.get('/pos/register/active/REG-01');
+      const { data } = await apiClient.get(`/pos/register/active/${registerId}`);
       setActiveSession(data.data);
     } catch {
       setActiveSession(null);
@@ -56,17 +74,17 @@ export default function RegisterSessionManager() {
 
   useEffect(() => {
     fetchActiveSession();
-  }, []);
+  }, [registerId]);
 
   const handleOpenRegister = async () => {
     try {
       const openingFloatInBase = convertAmount(openingFloat, activeCurrency, baseCurrency);
       const { data } = await apiClient.post('/pos/register/open', {
-        registerId: 'REG-01',
-        registerName: 'Main Counter Register #1',
-        branchId: '000000000000000000000001',
-        cashierId: 'CASHIER-01',
-        cashierName: 'Alice Operator',
+        registerId,
+        registerName,
+        branchId: effectiveBranchId,
+        cashierId: effectiveCashierId,
+        cashierName: effectiveCashierName,
         openingFloat: openingFloatInBase,
         currency: baseCurrency,
       });
@@ -85,12 +103,12 @@ export default function RegisterSessionManager() {
     try {
       const amountInBase = convertAmount(movementAmount, activeCurrency, baseCurrency);
       const { data } = await apiClient.post('/pos/register/cash-movement', {
-        registerId: 'REG-01',
+        registerId,
         type: movementType,
         amount: amountInBase,
         currency: baseCurrency,
         reason: movementReason,
-        performedBy: 'Alice Operator',
+        performedBy: effectiveCashierName,
       });
       setActiveSession(data.data);
       setMovementModalOpen(false);
@@ -106,7 +124,7 @@ export default function RegisterSessionManager() {
     try {
       const closingCashInBase = convertAmount(closingCash, activeCurrency, baseCurrency);
       const { data } = await apiClient.post('/pos/register/close', {
-        registerId: 'REG-01',
+        registerId,
         closingCash: closingCashInBase,
         currency: baseCurrency,
         managerNotes,

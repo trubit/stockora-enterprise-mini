@@ -232,7 +232,7 @@ export const TenantOnboardingWizard: React.FC = () => {
                       name="legalName"
                       value={formData.legalName}
                       onChange={handleChange}
-                      placeholder="e.g. Truson Foods Limited"
+                      placeholder="e.g. Apex Global Logistics Ltd"
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>

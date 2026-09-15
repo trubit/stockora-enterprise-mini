@@ -155,6 +155,7 @@ export const TenantSwitcher: React.FC = () => {
         anchorEl={anchorEl}
         open={isMenuOpen}
         onClose={handleClose}
+        disableRestoreFocus
         MenuListProps={{
           'aria-labelledby': 'tenant-switcher-button',
         }}

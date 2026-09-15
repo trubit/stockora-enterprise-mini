@@ -187,9 +187,10 @@ export class OrderManagementService {
     }
 
     const returnNumber = `RET-${orderNumber}-${Date.now().toString().slice(-4)}`;
-    const approvedObjectId = mongoose.Types.ObjectId.isValid(approvedBy)
-      ? new mongoose.Types.ObjectId(approvedBy)
-      : new mongoose.Types.ObjectId('000000000000000000000001');
+    if (!approvedBy || !mongoose.Types.ObjectId.isValid(approvedBy)) {
+      throw new Error('A valid operator ID (approvedBy) is required to process and approve a sales return.');
+    }
+    const approvedObjectId = new mongoose.Types.ObjectId(approvedBy);
 
     const salesReturn = await SalesReturn.create({
       returnNumber,

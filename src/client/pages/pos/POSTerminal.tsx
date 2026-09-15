@@ -42,6 +42,8 @@ import { apiClient } from '../../api/client.ts';
 import { toast } from 'react-hot-toast';
 import { useRegionalSettings } from '../../hooks/useRegionalSettings.js';
 import { CurrencySelector } from '../../components/CurrencySelector.tsx';
+import { useAuthStore } from '../../store/auth.ts';
+import { useTenantStore } from '../../store/tenant.ts';
 
 interface ProductItem {
   _id: string;
@@ -70,8 +72,27 @@ interface CartItem {
 }
 
 export default function POSTerminal() {
+  const { user } = useAuthStore();
+  const { activeTenant } = useTenantStore();
   const { formatAmount, currencySymbol, baseCurrency, activeCurrency, convertAmount } =
     useRegionalSettings();
+
+  const effectiveBranchId =
+    user?.branchId ||
+    (user as any)?.tenants?.[0]?.branchId ||
+    (activeTenant as any)?.branches?.[0]?._id ||
+    activeTenant?.branchId ||
+    'MAIN-BRANCH';
+
+  const effectiveWarehouseId =
+    (user as any)?.warehouseId ||
+    (activeTenant as any)?.warehouses?.[0]?._id ||
+    activeTenant?.warehouseId ||
+    'MAIN-WAREHOUSE';
+
+  const effectiveCashierId = user?._id || user?.id || 'CASHIER';
+  const effectiveCashierName = user?.username || user?.email || 'Operator';
+
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<ProductItem[]>([]);
@@ -538,10 +559,10 @@ export default function POSTerminal() {
 
     const checkoutPayload = {
       idempotencyKey: `POS-TX-${Date.now()}`,
-      branchId: '000000000000000000000001',
-      warehouseId: '000000000000000000000001',
-      cashierId: 'CASHIER-01',
-      cashierName: 'Alice Operator',
+      branchId: effectiveBranchId,
+      warehouseId: effectiveWarehouseId,
+      cashierId: effectiveCashierId,
+      cashierName: effectiveCashierName,
       customerId: selectedCustomer?.id,
       customerName: selectedCustomer?.name,
       customerEmail: selectedCustomer?.email,
@@ -598,9 +619,9 @@ export default function POSTerminal() {
     if (cart.length === 0) return;
     try {
       await apiClient.post('/pos/hold', {
-        cashierId: 'CASHIER-01',
-        cashierName: 'Alice Operator',
-        branchId: '000000000000000000000001',
+        cashierId: effectiveCashierId,
+        cashierName: effectiveCashierName,
+        branchId: effectiveBranchId,
         cartItems: cart,
         customer: selectedCustomer,
       });
@@ -613,7 +634,7 @@ export default function POSTerminal() {
 
   const handleFetchHeldSales = async () => {
     try {
-      const { data } = await apiClient.get('/pos/held/000000000000000000000001');
+      const { data } = await apiClient.get(`/pos/held/${effectiveBranchId}`);
       setHeldSales(data.data || []);
       setHeldModalOpen(true);
     } catch {

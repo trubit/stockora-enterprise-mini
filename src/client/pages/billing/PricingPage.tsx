@@ -502,13 +502,21 @@ export const PricingPage: React.FC = () => {
                   </Box>
 
                   {billingInterval === 'YEARLY' && plan.price > 0 && (
-                    <Typography
-                      variant="caption"
-                      sx={{ color: '#34d399', fontWeight: 800, display: 'block', mb: 2 }}
-                    >
-                      Equivalent to{' '}
-                      {formatAmount(plan.price * 0.8, { fromCurrency: plan.currency || 'NGN' })}/mo
-                    </Typography>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: '#34d399', fontWeight: 800, display: 'block' }}
+                      >
+                        Billed annually (Save {plan.yearlyDiscountPercent || 20}%)
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: isDark ? '#9ca3af' : '#64748b', display: 'block' }}
+                      >
+                        Equivalent to{' '}
+                        {formatAmount(plan.price * 0.8, { fromCurrency: plan.currency || 'NGN' })}/mo
+                      </Typography>
+                    </Box>
                   )}
 
                   <Divider
@@ -704,7 +712,7 @@ export const PricingPage: React.FC = () => {
       <Card className="glass-panel" sx={{ borderRadius: '20px', overflow: 'hidden' }}>
         <Box sx={{ p: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 900, color: isDark ? '#f8fafc' : '#0f172a' }}>
-            Detailed Feature & Quota Comparison Matrix
+            Detailed Feature & Limit Comparison
           </Typography>
           <Typography variant="caption" sx={{ color: isDark ? '#9ca3af' : '#64748b' }}>
             Enterprise breakdown of functional modules and rate limits per tier.
@@ -738,7 +746,7 @@ export const PricingPage: React.FC = () => {
                 </TableCell>
               </TableRow>
               <TableRow hover>
-                <TableCell sx={tableCellSx}>Staff & User Accounts</TableCell>
+                <TableCell sx={tableCellSx}>Max Users (Staff Seats)</TableCell>
                 {plans.map((p) => (
                   <TableCell
                     key={p._id}
@@ -749,7 +757,7 @@ export const PricingPage: React.FC = () => {
                 ))}
               </TableRow>
               <TableRow hover>
-                <TableCell sx={tableCellSx}>Physical Store Branches</TableCell>
+                <TableCell sx={tableCellSx}>Max Branches (Store Locations)</TableCell>
                 {plans.map((p) => (
                   <TableCell
                     key={p._id}
@@ -760,7 +768,7 @@ export const PricingPage: React.FC = () => {
                 ))}
               </TableRow>
               <TableRow hover>
-                <TableCell sx={tableCellSx}>Logistics Warehouses</TableCell>
+                <TableCell sx={tableCellSx}>Max Warehouses (Distribution Hubs)</TableCell>
                 {plans.map((p) => (
                   <TableCell
                     key={p._id}
@@ -822,7 +830,7 @@ export const PricingPage: React.FC = () => {
                 </TableCell>
               </TableRow>
               <TableRow hover>
-                <TableCell sx={tableCellSx}>POS Terminal & Barcode Scanning</TableCell>
+                <TableCell sx={tableCellSx}>POS & Inventory Checkout</TableCell>
                 {plans.map((p) => (
                   <TableCell key={p._id} sx={{ ...tableCellSx, textAlign: 'center' }}>
                     {p.features.pos ? (

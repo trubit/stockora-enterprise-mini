@@ -252,7 +252,7 @@ export const BillingDashboard: React.FC = () => {
       {/* Page Header */}
       <PageHeader
         title="Billing & Subscription Suite"
-        subtitle="Manage plan tier, live quota protection, paystack gateway settlements, and official VAT tax invoices."
+        subtitle="Manage plan tier, live quota protection, automated gateway transactions, and official VAT tax invoices."
         category="Enterprise Billing"
         badgeText="PAYSTACK SECURE"
         badgeColor="success"
