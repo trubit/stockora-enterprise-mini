@@ -514,7 +514,8 @@ export const PricingPage: React.FC = () => {
                         sx={{ color: isDark ? '#9ca3af' : '#64748b', display: 'block' }}
                       >
                         Equivalent to{' '}
-                        {formatAmount(plan.price * 0.8, { fromCurrency: plan.currency || 'NGN' })}/mo
+                        {formatAmount(plan.price * 0.8, { fromCurrency: plan.currency || 'NGN' })}
+                        /mo
                       </Typography>
                     </Box>
                   )}

@@ -46,7 +46,7 @@ export default function RegisterSessionManager() {
     user?.branchId ||
     (user as any)?.tenants?.[0]?.branchId ||
     (activeTenant as any)?.branches?.[0]?._id ||
-    activeTenant?.branchId ||
+    (activeTenant as any)?.branchId ||
     'MAIN-BRANCH';
 
   const effectiveCashierId = user?._id || user?.id || 'CASHIER';

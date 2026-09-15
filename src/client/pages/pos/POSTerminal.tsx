@@ -81,13 +81,13 @@ export default function POSTerminal() {
     user?.branchId ||
     (user as any)?.tenants?.[0]?.branchId ||
     (activeTenant as any)?.branches?.[0]?._id ||
-    activeTenant?.branchId ||
+    (activeTenant as any)?.branchId ||
     'MAIN-BRANCH';
 
   const effectiveWarehouseId =
     (user as any)?.warehouseId ||
     (activeTenant as any)?.warehouses?.[0]?._id ||
-    activeTenant?.warehouseId ||
+    (activeTenant as any)?.warehouseId ||
     'MAIN-WAREHOUSE';
 
   const effectiveCashierId = user?._id || user?.id || 'CASHIER';
