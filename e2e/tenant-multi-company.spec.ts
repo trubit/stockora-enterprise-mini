@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { authenticateE2E } from './helpers/auth.js';
 
 test.describe('Phase 43: Multi-Tenant SaaS & Company Isolation E2E Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    await authenticateE2E(page);
+  });
+
   test('1. Onboarding Wizard: Allows new company registration with 8-step flow', async ({ page }) => {
     // Navigate to onboarding wizard
     await page.goto('/onboarding');

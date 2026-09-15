@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { authenticateE2E } from './helpers/auth.js';
 
 test.describe('Phase 44: SaaS Pricing & Plan Catalog E2E Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    await authenticateE2E(page);
+  });
+
   test('1. Pricing Matrix: Loads all SaaS plans and toggles billing interval', async ({ page }) => {
     await page.goto('/pricing');
 

@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { authenticateE2E } from './helpers/auth.js';
 
 test.describe('Phase 44: SaaS Billing, Invoices & Usage Limits E2E Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    await authenticateE2E(page);
+  });
+
   test('1. Billing Dashboard: Renders active plan, renewal date, and quick resource meters', async ({ page }) => {
     await page.goto('/company/billing');
 

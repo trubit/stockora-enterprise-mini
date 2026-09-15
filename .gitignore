@@ -41,9 +41,11 @@ public/uploads/*
 # Local tools and binaries
 bin/
 
-# Test coverage
+# Test coverage & E2E artifacts
 coverage/
 *.lcov
+test-results/
+playwright-report/
 
 # SonarQube scanner work directory
 .scannerwork/
