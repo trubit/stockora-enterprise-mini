@@ -9,8 +9,10 @@ export default defineConfig({
 
     hookTimeout: 30_000,
     testTimeout: 30_000,
+    teardownTimeout: 30_000,
     fileParallelism: false,
     maxWorkers: 1,
+    pool: 'threads',
     env: {
       NODE_ENV: 'test',
       MONGODB_URI: 'mongodb://127.0.0.1:27017/stockora_test',
