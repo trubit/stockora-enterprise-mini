@@ -1,10 +1,16 @@
 import helmet from 'helmet';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
+import rateLimit, {
+  type Store,
+  type Options as RateLimitOptions,
+  type ClientRateLimitInfo,
+} from 'express-rate-limit';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { Router } from 'express';
 import { config } from '../../config/environment.js';
+import { redis } from '../database/redis.js';
+import { logger } from '../logger.js';
 
 export const securityMiddleware = Router();
 
@@ -111,13 +117,64 @@ securityMiddleware.use((req, res, next) => {
   next();
 });
 
-// 4. Redis-backed rate limiting — effective across all cluster workers.
-//    Uses the in-memory store as a safe fallback when Redis is unavailable.
-//    NOTE: To enable the Redis store, install `rate-limit-redis` and configure
-//    it here. The default MemoryStore is used for development compatibility.
+// 4. Redis-backed rate limiting — effective across all cluster workers and pods
+class RedisRateLimitStore implements Store {
+  private windowMs: number = 60000;
+  public prefix: string;
+
+  constructor(prefix = 'rl:') {
+    this.prefix = prefix;
+  }
+
+  init(options: RateLimitOptions): void {
+    this.windowMs = options.windowMs;
+  }
+
+  async increment(key: string): Promise<ClientRateLimitInfo> {
+    const fullKey = `${this.prefix}${key}`;
+    try {
+      if (redis && (redis.status === 'ready' || redis.status === 'connect')) {
+        const hits = await redis.incr(fullKey);
+        if (hits === 1) {
+          await redis.pexpire(fullKey, this.windowMs);
+        }
+        const pttl = await redis.pttl(fullKey);
+        const resetTime = new Date(Date.now() + (pttl > 0 ? pttl : this.windowMs));
+        return { totalHits: hits, resetTime };
+      }
+    } catch (err) {
+      logger.warn(`[RedisRateLimitStore] Redis rate limiter fallback: ${err}`);
+    }
+    return { totalHits: 1, resetTime: new Date(Date.now() + this.windowMs) };
+  }
+
+  async decrement(key: string): Promise<void> {
+    const fullKey = `${this.prefix}${key}`;
+    try {
+      if (redis && redis.status === 'ready') {
+        await redis.decr(fullKey);
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  async resetKey(key: string): Promise<void> {
+    const fullKey = `${this.prefix}${key}`;
+    try {
+      if (redis && redis.status === 'ready') {
+        await redis.del(fullKey);
+      }
+    } catch {
+      // Ignore
+    }
+  }
+}
+
 const apiLimiter = rateLimit({
   windowMs: config.rateLimitWindowMs,
   max: config.isProduction ? config.rateLimitMax : 1000,
+  store: new RedisRateLimitStore('rl:api:'),
   standardHeaders: true, // Emit RateLimit-* headers
   legacyHeaders: false, // Disable deprecated X-RateLimit-* headers
   keyGenerator: (req) => {
@@ -144,6 +201,7 @@ securityMiddleware.use('/api/', apiLimiter);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: config.isProduction ? 15 : 150,
+  store: new RedisRateLimitStore('rl:auth:'),
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {

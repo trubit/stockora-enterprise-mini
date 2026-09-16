@@ -8,15 +8,27 @@ import type { AuthenticatedRequest } from '../middleware/auth.js';
 
 export class InvoiceController {
   public static async listInvoices(
-    _req: AuthenticatedRequest,
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const invoices = await SupplierInvoice.find()
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const filter: Record<string, unknown> = {};
+      if (tenantId) {
+        filter.tenantId = tenantId;
+      }
+
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 100));
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const skip = (page - 1) * limit;
+
+      const invoices = await SupplierInvoice.find(filter)
         .populate('supplierId', 'name code email')
         .populate('poId', 'poNumber totalAmount status')
         .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
         .lean();
       res.json(invoices);
     } catch (err: unknown) {
@@ -38,17 +50,25 @@ export class InvoiceController {
     }
 
     try {
-      const po = await PurchaseOrder.findById(poId);
+      const tenantId = (req as any).tenantId || req.user?.tenantId || 'default';
+      const poQuery: Record<string, unknown> = { _id: poId };
+      if (tenantId) poQuery.tenantId = tenantId;
+
+      const po = await PurchaseOrder.findOne(poQuery);
       if (!po) {
         return next(new NotFoundError('Purchase Order not found.'));
       }
 
-      const existingInvoice = await SupplierInvoice.findOne({ invoiceNumber });
+      const invoiceQuery: Record<string, unknown> = { invoiceNumber };
+      if (tenantId) invoiceQuery.tenantId = tenantId;
+
+      const existingInvoice = await SupplierInvoice.findOne(invoiceQuery);
       if (existingInvoice) {
         return next(new ValidationError(`Invoice [${invoiceNumber}] already registered.`));
       }
 
       const invoice = await SupplierInvoice.create({
+        tenantId,
         invoiceNumber,
         poId: new mongoose.Types.ObjectId(poId),
         supplierId: new mongoose.Types.ObjectId(supplierId),
@@ -59,7 +79,7 @@ export class InvoiceController {
         status: 'UNPAID',
       });
 
-      // Optionally transition PO state to BILLED
+      // Transition PO state to BILLED
       po.status = 'BILLED';
       await po.save();
 
@@ -84,7 +104,11 @@ export class InvoiceController {
   ): Promise<void> {
     const { id } = req.params;
     try {
-      const invoice = await SupplierInvoice.findById(id);
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const query: Record<string, unknown> = { _id: id };
+      if (tenantId) query.tenantId = tenantId;
+
+      const invoice = await SupplierInvoice.findOne(query);
       if (!invoice) {
         return next(new NotFoundError('Invoice not found.'));
       }

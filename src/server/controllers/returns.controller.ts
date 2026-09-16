@@ -11,7 +11,15 @@ export class ReturnsController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const returns = await ReturnsService.listReturns(req.query.status as string | undefined);
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 100));
+      const returns = await ReturnsService.listReturns(
+        req.query.status as string | undefined,
+        tenantId,
+        page,
+        limit
+      );
       res.json(returns);
     } catch (err: unknown) {
       next(err);
@@ -24,7 +32,8 @@ export class ReturnsController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const salesReturn = await ReturnsService.getReturn(String(req.params.id));
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const salesReturn = await ReturnsService.getReturn(String(req.params.id), tenantId);
       res.json(salesReturn);
     } catch (err: unknown) {
       next(err);

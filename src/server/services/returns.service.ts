@@ -238,17 +238,24 @@ export class ReturnsService {
     return salesReturn;
   }
 
-  public static async listReturns(status?: string) {
-    const filter = status ? { status } : {};
+  public static async listReturns(status?: string, tenantId?: string, page = 1, limit = 100) {
+    const filter: Record<string, unknown> = {};
+    if (status) filter.status = status;
+    if (tenantId) filter.tenantId = tenantId;
+    const skip = Math.max(0, (page - 1) * limit);
     return SalesReturn.find(filter)
       .populate('createdBy', 'username email')
       .populate('approvedBy', 'username email')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Math.min(200, Math.max(1, limit)));
   }
 
-  public static async getReturn(returnId: string) {
+  public static async getReturn(returnId: string, tenantId?: string) {
     if (!mongoose.Types.ObjectId.isValid(returnId)) throw new ValidationError('Invalid return ID.');
-    const salesReturn = await SalesReturn.findById(returnId)
+    const query: Record<string, unknown> = { _id: returnId };
+    if (tenantId) query.tenantId = tenantId;
+    const salesReturn = await SalesReturn.findOne(query)
       .populate('createdBy', 'username email')
       .populate('approvedBy', 'username email');
     if (!salesReturn) throw new NotFoundError('Return record not found.');

@@ -18,6 +18,7 @@ import { redis } from '../database/redis.js';
 import { logger } from '../logger.js';
 import { eventBus } from '../events/eventBus.js';
 
+import { ValidationError } from '../errors/AppError.js';
 export type PosManualPaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CARD';
 
 function formatCleanAddress(contact?: any, fallback?: string): string {
@@ -180,17 +181,21 @@ export class POSService {
 
     // 3. Validate Cart Items & Build Details
     if (!input.items || input.items.length === 0) {
-      throw new Error('POS Cart cannot be empty.');
+      throw new ValidationError('POS Cart cannot be empty.');
     }
 
     const itemDetails = [];
     for (const itemInput of input.items) {
-      const product = await Product.findById(itemInput.productId);
+      const productFilter: any = { _id: itemInput.productId };
+      if (input.tenantId) {
+        productFilter.tenantId = input.tenantId;
+      }
+      const product = await Product.findOne(productFilter);
       if (!product) {
-        throw new Error(`Product ID ${itemInput.productId} not found.`);
+        throw new ValidationError(`Product ID ${itemInput.productId} not found.`);
       }
       if (product.quantity < itemInput.quantity) {
-        throw new Error(
+        throw new ValidationError(
           `Insufficient stock for ${product.name} (SKU: ${product.sku}). On hand: ${product.quantity}`
         );
       }
@@ -253,9 +258,9 @@ export class POSService {
     const changeAmount =
       resolvedMethod === 'CASH' ? Number((amountTendered - calc.grandTotal).toFixed(2)) : 0;
 
-    // 6. Generate Order Number
-    const orderCount = await OmnichannelOrder.countDocuments();
-    const orderNumber = `POS-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}${String(orderCount + 1).padStart(4, '0')}`;
+    // 6. Generate Collision-Resistant High-Concurrency Order Number
+    const randomSuffix = Math.floor(100000 + Math.random() * 900000);
+    const orderNumber = `POS-${new Date().getFullYear()}-${Date.now()}-${randomSuffix}`;
 
     // 7. Formulate Single Payment Allocation Record
     const refNo =
@@ -307,11 +312,37 @@ export class POSService {
       notes: input.notes ? `${input.notes} | Change: $${changeAmount}` : `Change: $${changeAmount}`,
     });
 
-    // 8. Deduct stock & create inventory movements
+    // 8. Deduct stock atomically with rollback compensation
+    const decrementedItems: { productId: mongoose.Types.ObjectId; quantity: number }[] = [];
     for (const item of itemDetails) {
-      await Product.findByIdAndUpdate(item.productId, {
-        $inc: { quantity: -item.quantity },
-      });
+      const productFilter: any = {
+        _id: item.productId,
+        quantity: { $gte: item.quantity },
+      };
+      if (input.tenantId) {
+        productFilter.tenantId = input.tenantId;
+      }
+
+      const updated = await Product.findOneAndUpdate(
+        productFilter,
+        { $inc: { quantity: -item.quantity } },
+        { new: true }
+      );
+
+      if (!updated) {
+        // Roll back any previously decremented items in this transaction
+        for (const comp of decrementedItems) {
+          await Product.findByIdAndUpdate(comp.productId, {
+            $inc: { quantity: comp.quantity },
+          });
+        }
+        // Roll back the created order to prevent orphaned unfulfillable orders
+        await OmnichannelOrder.findByIdAndDelete(order._id);
+        throw new ValidationError(
+          `Insufficient stock for ${item.name} (SKU: ${item.sku}). Stock was depleted by a concurrent transaction.`
+        );
+      }
+      decrementedItems.push({ productId: item.productId, quantity: item.quantity });
     }
 
     if (input.tenantId) {
@@ -325,12 +356,14 @@ export class POSService {
 
     // Resolve tenant / company info for legacy transaction
     const tenantInfo: any = input.tenantId
-      ? (await Tenant.findById(input.tenantId).lean()) ||
-        (await Tenant.findOne({ slug: input.tenantId }).lean())
+      ? (mongoose.Types.ObjectId.isValid(input.tenantId)
+          ? await Tenant.findById(input.tenantId).lean()
+          : null) || (await Tenant.findOne({ slug: input.tenantId }).lean())
       : null;
-    const companyInfo: any = input.tenantId
-      ? await Company.findOne({ tenantId: input.tenantId }).lean()
-      : null;
+    const companyInfo: any =
+      input.tenantId && mongoose.Types.ObjectId.isValid(input.tenantId)
+        ? await Company.findOne({ tenantId: input.tenantId }).lean()
+        : null;
     const resolvedBizName = tenantInfo?.name || companyInfo?.name || 'Retail Store';
 
     // 9. Record POS Transaction for legacy compatibility

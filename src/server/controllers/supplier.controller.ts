@@ -6,12 +6,27 @@ import type { AuthenticatedRequest } from '../middleware/auth.js';
 
 export class SupplierController {
   public static async getSuppliers(
-    _req: AuthenticatedRequest,
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const suppliers = await Supplier.find().lean();
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const filter: Record<string, unknown> = {};
+      if (tenantId) {
+        filter.tenantId = tenantId;
+      }
+
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 100));
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const skip = (page - 1) * limit;
+
+      const suppliers = await Supplier.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
       res.json(suppliers);
     } catch (err: unknown) {
       next(err);
@@ -25,7 +40,11 @@ export class SupplierController {
   ): Promise<void> {
     const { id } = req.params;
     try {
-      const supplier = await Supplier.findById(id).lean();
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const query: Record<string, unknown> = { _id: id };
+      if (tenantId) query.tenantId = tenantId;
+
+      const supplier = await Supplier.findOne(query).lean();
       if (!supplier) {
         return next(new NotFoundError('Supplier not found.'));
       }
@@ -49,12 +68,17 @@ export class SupplierController {
     }
 
     try {
-      const existing = await Supplier.findOne({ code: code.toUpperCase() });
+      const tenantId = (req as any).tenantId || req.user?.tenantId || 'default';
+      const codeQuery: Record<string, unknown> = { code: code.toUpperCase() };
+      if (tenantId) codeQuery.tenantId = tenantId;
+
+      const existing = await Supplier.findOne(codeQuery);
       if (existing) {
         return next(new ValidationError(`Supplier code [${code}] already exists.`));
       }
 
       const supplier = await Supplier.create({
+        tenantId,
         name,
         code: code.toUpperCase(),
         contactPerson,
@@ -85,7 +109,11 @@ export class SupplierController {
   ): Promise<void> {
     const { id } = req.params;
     try {
-      const supplier = await Supplier.findById(id);
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const query: Record<string, unknown> = { _id: id };
+      if (tenantId) query.tenantId = tenantId;
+
+      const supplier = await Supplier.findOne(query);
       if (!supplier) {
         return next(new NotFoundError('Supplier not found.'));
       }
@@ -102,7 +130,9 @@ export class SupplierController {
       delete updatableData.__v;
 
       if (code && code.toUpperCase() !== supplier.code) {
-        const existing = await Supplier.findOne({ code: code.toUpperCase() });
+        const codeQuery: Record<string, unknown> = { code: code.toUpperCase() };
+        if (tenantId) codeQuery.tenantId = tenantId;
+        const existing = await Supplier.findOne(codeQuery);
         if (existing) {
           return next(new ValidationError(`Supplier code [${code}] already exists.`));
         }
@@ -134,7 +164,11 @@ export class SupplierController {
   ): Promise<void> {
     const { id } = req.params;
     try {
-      const supplier = await Supplier.findById(id);
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const query: Record<string, unknown> = { _id: id };
+      if (tenantId) query.tenantId = tenantId;
+
+      const supplier = await Supplier.findOne(query);
       if (!supplier) {
         return next(new NotFoundError('Supplier not found.'));
       }

@@ -18,15 +18,26 @@ export class ProductController {
         return;
       }
       const search = req.query.search as string;
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 100));
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const skip = (page - 1) * limit;
 
       if (search && search.trim() !== '') {
-        const regex = new RegExp(search.trim(), 'i');
+        // Escape regex special characters to prevent ReDoS attacks
+        const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escaped, 'i');
         const filter: Record<string, unknown> = {
           tenantId,
           $or: [{ name: regex }, { sku: regex }, { category: regex }, { barcode: regex }],
         };
 
-        const products = await Product.find(filter).lean();
+        const products = await Product.find(filter).skip(skip).limit(limit).lean();
+        res.json(products);
+        return;
+      }
+
+      if (req.query.page || req.query.limit) {
+        const products = await Product.find({ tenantId }).skip(skip).limit(limit).lean();
         res.json(products);
         return;
       }
@@ -38,7 +49,7 @@ export class ProductController {
         return;
       }
 
-      const products = await Product.find({ tenantId }).lean();
+      const products = await Product.find({ tenantId }).limit(200).lean();
       await redis.setex(cacheKey, 300, JSON.stringify(products));
       res.json(products);
     } catch (err: unknown) {

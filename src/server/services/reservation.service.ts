@@ -6,6 +6,7 @@ import {
 import { Product } from '../models/Product.js';
 import { logger } from '../logger.js';
 import { eventBus } from '../events/eventBus.js';
+import { ValidationError } from '../errors/AppError.js';
 
 export class ReservationService {
   /**
@@ -32,6 +33,18 @@ export class ReservationService {
 
     const expiresAt = new Date(Date.now() + reservationDurationMinutes * 60 * 1000);
 
+    // Deduct available stock atomically
+    const updatedProduct = await Product.findOneAndUpdate(
+      { _id: productId, quantity: { $gte: quantity } },
+      { $inc: { quantity: -quantity } },
+      { new: true }
+    );
+    if (!updatedProduct) {
+      throw new ValidationError(
+        `Insufficient available stock to reserve ${quantity} units of SKU ${product.sku}.`
+      );
+    }
+
     const reservation = await InventoryReservation.create({
       productId: new mongoose.Types.ObjectId(productId),
       sku: product.sku,
@@ -42,10 +55,6 @@ export class ReservationService {
       status: 'RESERVED',
       expiresAt,
     });
-
-    // Deduct available stock atomically or lock reservation
-    product.quantity -= quantity;
-    await product.save();
 
     logger.info(
       `[Reservation Service] Reserved ${quantity} units of ${product.sku} for Order #${orderNumber} (Expires: ${expiresAt.toISOString()})`
@@ -92,11 +101,9 @@ export class ReservationService {
 
     for (const res of reservations) {
       if (res.status === 'RESERVED') {
-        const product = await Product.findById(res.productId);
-        if (product) {
-          product.quantity += res.quantity;
-          await product.save();
-        }
+        await Product.findByIdAndUpdate(res.productId, {
+          $inc: { quantity: res.quantity },
+        });
       }
       res.status = 'RELEASED';
       await res.save();
@@ -117,11 +124,9 @@ export class ReservationService {
 
     let expiredCount = 0;
     for (const res of staleReservations) {
-      const product = await Product.findById(res.productId);
-      if (product) {
-        product.quantity += res.quantity;
-        await product.save();
-      }
+      await Product.findByIdAndUpdate(res.productId, {
+        $inc: { quantity: res.quantity },
+      });
       res.status = 'EXPIRED';
       await res.save();
       expiredCount++;

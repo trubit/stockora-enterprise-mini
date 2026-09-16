@@ -17,12 +17,24 @@ export class NotificationController {
   ): Promise<void> {
     try {
       const { unreadOnly } = req.query;
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+
+      const recipientConditions: Record<string, unknown>[] = [{ userId: req.user?.id }];
+
+      if (tenantId) {
+        recipientConditions.push(
+          { targetRole: req.user?.roleName, tenantId },
+          { userId: { $exists: false }, targetRole: { $exists: false }, tenantId }
+        );
+      } else {
+        recipientConditions.push(
+          { targetRole: req.user?.roleName },
+          { userId: { $exists: false }, targetRole: { $exists: false } }
+        );
+      }
+
       const filter: Record<string, unknown> = {
-        $or: [
-          { userId: req.user?.id },
-          { userId: { $exists: false }, targetRole: { $exists: false } }, // Global broadcasts
-          { targetRole: req.user?.roleName }, // Role-targeted
-        ],
+        $or: recipientConditions,
       };
       if (unreadOnly === 'true') filter.status = 'UNREAD';
 

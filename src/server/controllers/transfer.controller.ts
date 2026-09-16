@@ -10,18 +10,30 @@ import type { AuthenticatedRequest } from '../middleware/auth.js';
 
 export class TransferController {
   public static async listTransfers(
-    _req: AuthenticatedRequest,
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const transfers = await WarehouseTransfer.find()
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const filter: Record<string, unknown> = {};
+      if (tenantId) {
+        filter.tenantId = tenantId;
+      }
+
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 100));
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const skip = (page - 1) * limit;
+
+      const transfers = await WarehouseTransfer.find(filter)
         .populate('fromWarehouseId', 'name code')
         .populate('toWarehouseId', 'name code')
         .populate('items.productId', 'name sku uom')
         .populate('createdBy', 'username email')
         .populate('receivedBy', 'username email')
         .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
         .lean();
       res.json(transfers);
     } catch (err: unknown) {
@@ -55,16 +67,20 @@ export class TransferController {
     }
 
     try {
+      const tenantId = (req as any).tenantId || req.user?.tenantId || 'default';
+
       // Validate item quantities and existence
       for (const item of items) {
-        const product = await Product.findById(item.productId);
+        const productQuery: Record<string, unknown> = { _id: item.productId };
+        if (tenantId) productQuery.tenantId = tenantId;
+        const product = await Product.findOne(productQuery);
         if (!product) {
           return next(new NotFoundError(`Product [${item.productId}] not found.`));
         }
-        if (product.quantity < Number(item.quantity)) {
+        if (product.quantity < item.quantity) {
           return next(
             new ValidationError(
-              `Insufficient stock for product [${product.name}]. Available: ${product.quantity}, Transfer request: ${item.quantity}`
+              `Insufficient stock for ${product.name} (SKU: ${product.sku}). Available: ${product.quantity}, Requested: ${item.quantity}`
             )
           );
         }
@@ -72,11 +88,17 @@ export class TransferController {
 
       const transferNumber = `TRF-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+      const formattedItems = items.map((i) => ({
+        productId: new mongoose.Types.ObjectId(i.productId),
+        quantity: Number(i.quantity),
+      }));
+
       const transfer = await WarehouseTransfer.create({
+        tenantId,
         transferNumber,
-        fromWarehouseId,
-        toWarehouseId,
-        items: items.map((i) => ({ productId: i.productId, quantity: Number(i.quantity) })),
+        fromWarehouseId: new mongoose.Types.ObjectId(fromWarehouseId),
+        toWarehouseId: new mongoose.Types.ObjectId(toWarehouseId),
+        items: formattedItems,
         notes,
         status: 'PENDING',
         createdBy: req.user?.id,
@@ -111,7 +133,11 @@ export class TransferController {
     }
 
     try {
-      const transfer = await WarehouseTransfer.findById(id);
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const query: Record<string, unknown> = { _id: id };
+      if (tenantId) query.tenantId = tenantId;
+
+      const transfer = await WarehouseTransfer.findOne(query);
       if (!transfer) {
         return next(new NotFoundError('Transfer order not found.'));
       }
@@ -128,25 +154,33 @@ export class TransferController {
           return next(new ValidationError('Transfers can only go IN_TRANSIT from PENDING.'));
         }
 
-        // Deduct from standard quantity, add to reserved
+        // Deduct from standard quantity, add to reserved atomically
         for (const item of transfer.items) {
-          const product = await Product.findById(item.productId);
-          if (product) {
-            product.quantity -= item.quantity;
-            product.reservedQuantity += item.quantity;
-            await product.save();
+          const updated = await Product.findOneAndUpdate(
+            { _id: item.productId, quantity: { $gte: item.quantity } },
+            { $inc: { quantity: -item.quantity, reservedQuantity: item.quantity } },
+            { new: true }
+          );
 
-            await StockMovement.create({
-              productId: product._id,
-              type: 'TRANSFER',
-              quantity: -item.quantity,
-              costPrice: product.costPrice || product.cost || 0,
-              sellingPrice: product.sellingPrice || product.price || 0,
-              referenceId: transfer._id.toString(),
-              userId: req.user?.id,
-              notes: `Stock dispatched in-transit under transfer: ${transfer.transferNumber}`,
-            });
+          if (!updated) {
+            return next(
+              new ValidationError(
+                `Insufficient stock to dispatch item ${item.productId} for transfer.`
+              )
+            );
           }
+
+          await StockMovement.create({
+            tenantId: transfer.tenantId,
+            productId: updated._id,
+            type: 'TRANSFER',
+            quantity: -item.quantity,
+            costPrice: updated.costPrice || updated.cost || 0,
+            sellingPrice: updated.sellingPrice || updated.price || 0,
+            referenceId: transfer._id.toString(),
+            userId: req.user?.id,
+            notes: `Stock dispatched in-transit under transfer: ${transfer.transferNumber}`,
+          });
         }
 
         transfer.status = 'IN_TRANSIT';
@@ -156,20 +190,22 @@ export class TransferController {
           return next(new ValidationError('Transfers can only be completed from IN_TRANSIT.'));
         }
 
-        // Remove from reserved, add to standard quantity
+        // Remove from reserved, add to destination standard quantity atomically
         for (const item of transfer.items) {
-          const product = await Product.findById(item.productId);
-          if (product) {
-            product.reservedQuantity -= item.quantity;
-            product.quantity += item.quantity;
-            await product.save();
+          const updated = await Product.findOneAndUpdate(
+            { _id: item.productId },
+            { $inc: { reservedQuantity: -item.quantity, quantity: item.quantity } },
+            { new: true }
+          );
 
+          if (updated) {
             await StockMovement.create({
-              productId: product._id,
+              tenantId: transfer.tenantId,
+              productId: updated._id,
               type: 'TRANSFER',
               quantity: item.quantity,
-              costPrice: product.costPrice || product.cost || 0,
-              sellingPrice: product.sellingPrice || product.price || 0,
+              costPrice: updated.costPrice || updated.cost || 0,
+              sellingPrice: updated.sellingPrice || updated.price || 0,
               referenceId: transfer._id.toString(),
               userId: req.user?.id,
               notes: `Stock received at destination warehouse under transfer: ${transfer.transferNumber}`,
@@ -181,21 +217,23 @@ export class TransferController {
         transfer.receivedAt = new Date();
         transfer.receivedBy = req.user?.id ? new mongoose.Types.ObjectId(req.user.id) : undefined;
       } else if (status === 'CANCELLED') {
-        // Rollback reserved stock if it was already IN_TRANSIT
+        // Rollback reserved stock atomically if it was already IN_TRANSIT
         if (transfer.status === 'IN_TRANSIT') {
           for (const item of transfer.items) {
-            const product = await Product.findById(item.productId);
-            if (product) {
-              product.reservedQuantity -= item.quantity;
-              product.quantity += item.quantity;
-              await product.save();
+            const updated = await Product.findOneAndUpdate(
+              { _id: item.productId },
+              { $inc: { reservedQuantity: -item.quantity, quantity: item.quantity } },
+              { new: true }
+            );
 
+            if (updated) {
               await StockMovement.create({
-                productId: product._id,
+                tenantId: transfer.tenantId,
+                productId: updated._id,
                 type: 'TRANSFER',
                 quantity: item.quantity,
-                costPrice: product.costPrice || product.cost || 0,
-                sellingPrice: product.sellingPrice || product.price || 0,
+                costPrice: updated.costPrice || updated.cost || 0,
+                sellingPrice: updated.sellingPrice || updated.price || 0,
                 referenceId: transfer._id.toString(),
                 userId: req.user?.id,
                 notes: `Transfer ${transfer.transferNumber} cancelled. Dispatched stock returned to inventory.`,
@@ -209,6 +247,9 @@ export class TransferController {
 
       await transfer.save();
       await redis.del('products:all');
+      if (transfer.tenantId) {
+        await redis.del(`tenant:${transfer.tenantId}:products:all`);
+      }
 
       await AuditLog.create({
         userId: req.user?.id,

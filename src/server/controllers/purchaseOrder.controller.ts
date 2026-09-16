@@ -11,16 +11,28 @@ import type { AuthenticatedRequest } from '../middleware/auth.js';
 
 export class PurchaseOrderController {
   public static async listPOs(
-    _req: AuthenticatedRequest,
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const pos = await PurchaseOrder.find()
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const filter: Record<string, unknown> = {};
+      if (tenantId) {
+        filter.tenantId = tenantId;
+      }
+
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 100));
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const skip = (page - 1) * limit;
+
+      const pos = await PurchaseOrder.find(filter)
         .populate('supplierId', 'name code email')
         .populate('items.productId', 'name sku uom')
         .populate('approvedBy', 'username email')
         .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
         .lean();
       res.json(pos);
     } catch (err: unknown) {
@@ -40,6 +52,7 @@ export class PurchaseOrderController {
     }
 
     try {
+      const tenantId = (req as any).tenantId || req.user?.tenantId || 'default';
       let totalAmount = 0;
       const formattedItems = items.map((i) => {
         const costPrice = Number(i.costPrice || 0);
@@ -56,6 +69,7 @@ export class PurchaseOrderController {
       const poNumber = `PO-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const po = await PurchaseOrder.create({
+        tenantId,
         poNumber,
         requisitionId: requisitionId ? new mongoose.Types.ObjectId(requisitionId) : undefined,
         supplierId: new mongoose.Types.ObjectId(supplierId),
@@ -86,7 +100,11 @@ export class PurchaseOrderController {
   ): Promise<void> {
     const { id } = req.params;
     try {
-      const po = await PurchaseOrder.findById(id);
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const query: Record<string, unknown> = { _id: id };
+      if (tenantId) query.tenantId = tenantId;
+
+      const po = await PurchaseOrder.findOne(query);
       if (!po) {
         return next(new NotFoundError('Purchase Order not found.'));
       }
@@ -128,7 +146,11 @@ export class PurchaseOrderController {
     }
 
     try {
-      const po = await PurchaseOrder.findById(id);
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const query: Record<string, unknown> = { _id: id };
+      if (tenantId) query.tenantId = tenantId;
+
+      const po = await PurchaseOrder.findOne(query);
       if (!po) {
         return next(new NotFoundError('Purchase Order not found.'));
       }
@@ -169,22 +191,25 @@ export class PurchaseOrderController {
 
         poItem.receivedQuantity += qtyToReceive;
 
-        // Add to main product catalog inventory count
-        const product = await Product.findById(receiveItem.productId);
-        if (product) {
-          product.quantity += qtyToReceive;
-          // Set new product purchase costs to PO price dynamically
-          product.costPrice = poItem.costPrice;
-          product.cost = poItem.costPrice;
-          await product.save();
+        // Atomically increment product inventory count and update cost
+        const updatedProduct = await Product.findOneAndUpdate(
+          { _id: receiveItem.productId },
+          {
+            $inc: { quantity: qtyToReceive },
+            $set: { costPrice: poItem.costPrice, cost: poItem.costPrice },
+          },
+          { new: true }
+        );
 
+        if (updatedProduct) {
           // Log inventory movement history
           await StockMovement.create({
-            productId: product._id,
+            tenantId: po.tenantId,
+            productId: updatedProduct._id,
             type: 'PURCHASE',
             quantity: qtyToReceive,
             costPrice: poItem.costPrice,
-            sellingPrice: product.sellingPrice || product.price || 0,
+            sellingPrice: updatedProduct.sellingPrice || updatedProduct.price || 0,
             referenceId: grnNumber,
             userId: req.user?.id,
             notes: `Received stock under PO: ${po.poNumber}. GRN: ${grnNumber}`,
@@ -210,6 +235,7 @@ export class PurchaseOrderController {
       await po.save();
 
       const goodsReceipt = await GoodsReceipt.create({
+        tenantId: po.tenantId,
         grnNumber,
         poId: po._id,
         items: grItems,
@@ -218,6 +244,9 @@ export class PurchaseOrderController {
       });
 
       await redis.del('products:all');
+      if (po.tenantId) {
+        await redis.del(`tenant:${po.tenantId}:products:all`);
+      }
 
       await AuditLog.create({
         userId: req.user?.id,

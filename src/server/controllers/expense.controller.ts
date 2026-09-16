@@ -11,7 +11,8 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const tenantId = (req.user as any)?.tenantId || (req.user as any)?.companyId;
+      const tenantId =
+        (req as any).tenantId || (req.user as any)?.tenantId || (req.user as any)?.companyId;
       const userId = (req.user as any)?.id;
 
       const expense = await ExpenseService.submitExpense({
@@ -32,11 +33,18 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const tenantId = (req.user as any)?.tenantId || (req.user as any)?.companyId;
-      const query = tenantId
-        ? { $or: [{ tenantId }, { tenantId: null }, { tenantId: { $exists: false } }] }
-        : {};
-      const expenses = await Expense.find(query).sort({ expenseDate: -1 });
+      const tenantId =
+        (req as any).tenantId || (req.user as any)?.tenantId || (req.user as any)?.companyId;
+      const query: Record<string, unknown> = {};
+      if (tenantId) {
+        query.tenantId = tenantId;
+      }
+
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 100));
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const skip = (page - 1) * limit;
+
+      const expenses = await Expense.find(query).sort({ expenseDate: -1 }).skip(skip).limit(limit);
       res.json({ success: true, data: expenses });
     } catch (err) {
       next(err);
@@ -65,13 +73,16 @@ export class ExpenseController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const tenantId = (req.user as any)?.tenantId || (req.user as any)?.companyId;
-      let categories = await ExpenseCategory.find({
-        $or: [{ tenantId: tenantId || null }, { tenantId: { $exists: false } }],
-        isActive: true,
-      });
+      const tenantId =
+        (req as any).tenantId || (req.user as any)?.tenantId || (req.user as any)?.companyId;
+      const catQuery: Record<string, unknown> = { isActive: true };
+      if (tenantId) {
+        catQuery.tenantId = tenantId;
+      }
 
-      if (categories.length === 0) {
+      let categories = await ExpenseCategory.find(catQuery);
+
+      if (categories.length === 0 && tenantId) {
         const defaults = [
           { code: '6000', name: 'Operating & Administrative' },
           { code: '6100', name: 'Rent & Lease' },
@@ -81,7 +92,7 @@ export class ExpenseController {
         for (const def of defaults) {
           try {
             await ExpenseCategory.create({
-              tenantId: tenantId || null,
+              tenantId,
               code: def.code,
               name: def.name,
               isActive: true,
@@ -90,7 +101,7 @@ export class ExpenseController {
             // Already created
           }
         }
-        categories = await ExpenseCategory.find({ isActive: true });
+        categories = await ExpenseCategory.find(catQuery);
       }
 
       res.json({ success: true, data: categories });

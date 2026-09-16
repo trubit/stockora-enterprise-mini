@@ -57,6 +57,7 @@ const defaultPushProvider: IPushProvider = {
 // ---------------------------------------------------------------------------
 
 export interface SendNotificationParams {
+  tenantId?: string;
   userId?: string | mongoose.Types.ObjectId;
   targetRole?: string;
   type: INotification['type'];
@@ -89,6 +90,7 @@ export class NotificationService {
    */
   public static async send(params: SendNotificationParams): Promise<INotification> {
     const {
+      tenantId,
       userId,
       targetRole,
       type,
@@ -105,6 +107,7 @@ export class NotificationService {
     const dbUserId = userId ? new mongoose.Types.ObjectId(userId.toString()) : undefined;
 
     const notification = await Notification.create({
+      tenantId,
       userId: dbUserId,
       targetRole,
       type,
@@ -128,6 +131,7 @@ export class NotificationService {
     if (channels.includes('IN_APP')) {
       const socketPayload = {
         id: notification._id,
+        tenantId,
         userId: dbUserId?.toString(),
         targetRole,
         type,
@@ -139,14 +143,28 @@ export class NotificationService {
       };
 
       if (targetRole) {
-        SocketManager.getInstance().emitToRoom(
-          `role:${targetRole}`,
-          'notification:received',
-          socketPayload
-        );
+        if (tenantId) {
+          SocketManager.getInstance().emitToRoom(
+            `tenant:${tenantId}:role:${targetRole}`,
+            'notification:received',
+            socketPayload
+          );
+        } else {
+          SocketManager.getInstance().emitToRoom(
+            `role:${targetRole}`,
+            'notification:received',
+            socketPayload
+          );
+        }
       } else if (dbUserId) {
         SocketManager.getInstance().emitToRoom(
           `user:${dbUserId}`,
+          'notification:received',
+          socketPayload
+        );
+      } else if (tenantId) {
+        SocketManager.getInstance().emitToRoom(
+          `tenant:${tenantId}`,
           'notification:received',
           socketPayload
         );
@@ -207,7 +225,11 @@ export class NotificationService {
     roleName: string,
     params: Omit<SendNotificationParams, 'userId' | 'targetRole'>
   ): Promise<void> {
-    const users = await User.find({ roleName, isActive: true }).select('_id');
+    const filter: Record<string, unknown> = { roleName, isActive: true };
+    if (params.tenantId) {
+      filter.tenantId = params.tenantId;
+    }
+    const users = await User.find(filter).select('_id');
     const results = users.map((u) =>
       NotificationService.send({ ...params, userId: u._id.toString(), targetRole: roleName }).catch(
         (err) => logger.error(`[sendToRole] Failed for user ${u._id}:`, err)

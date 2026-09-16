@@ -124,7 +124,7 @@ const SupplierSchema = new Schema<ISupplier>(
     companyId: { type: Schema.Types.ObjectId, ref: 'Company', index: true },
     name: { type: String, required: true, trim: true },
     legalName: { type: String, trim: true },
-    code: { type: String, required: true, unique: true, index: true, uppercase: true, trim: true },
+    code: { type: String, required: true, uppercase: true, trim: true },
     contactPerson: { type: String, required: true, trim: true },
     email: { type: String, required: true, lowercase: true, trim: true },
     phone: { type: String, required: true, trim: true },
@@ -176,6 +176,9 @@ const SupplierSchema = new Schema<ISupplier>(
   },
   { timestamps: true }
 );
+
+SupplierSchema.index({ tenantId: 1, code: 1 }, { unique: true });
+SupplierSchema.index({ tenantId: 1, status: 1 });
 
 export const Supplier =
   mongoose.models.Supplier || mongoose.model<ISupplier>('Supplier', SupplierSchema);

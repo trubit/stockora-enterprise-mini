@@ -1,7 +1,8 @@
 import mongoose, { Schema, type Document } from 'mongoose';
 
 export interface INotification extends Document {
-  userId?: mongoose.Types.ObjectId; // null = global broadcast
+  tenantId?: string; // Optional tenant partition
+  userId?: mongoose.Types.ObjectId; // null = global or role broadcast within tenant
   targetRole?: string; // e.g. 'admin', 'cashier' — role-targeted broadcast
   type: 'INFO' | 'WARNING' | 'SECURITY' | 'SYSTEM' | 'PROMO' | 'TASK';
   title: string;
@@ -18,6 +19,7 @@ export interface INotification extends Document {
 
 const NotificationSchema = new Schema<INotification>(
   {
+    tenantId: { type: String, index: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     targetRole: { type: String, index: true },
     type: {
@@ -45,6 +47,8 @@ const NotificationSchema = new Schema<INotification>(
   { timestamps: true }
 );
 
+NotificationSchema.index({ tenantId: 1, targetRole: 1, status: 1 });
+NotificationSchema.index({ tenantId: 1, userId: 1, status: 1 });
 NotificationSchema.index({ scheduledAt: 1, status: 1 });
 NotificationSchema.index({ targetRole: 1, status: 1 });
 

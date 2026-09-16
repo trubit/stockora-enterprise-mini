@@ -134,9 +134,12 @@ export class SocketManager {
         socket.join(`role:${socket.data.roleName}`);
       }
 
-      // Join tenant-scoped room for multi-tenant isolation
+      // Join tenant-scoped room and tenant-role room for multi-tenant isolation
       if (socket.data.tenantId) {
         socket.join(`tenant:${socket.data.tenantId}`);
+        if (socket.data.roleName) {
+          socket.join(`tenant:${socket.data.tenantId}:role:${socket.data.roleName}`);
+        }
       }
 
       socket.on('disconnect', (reason) => {

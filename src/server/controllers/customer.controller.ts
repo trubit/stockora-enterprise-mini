@@ -6,12 +6,27 @@ import type { AuthenticatedRequest } from '../middleware/auth.js';
 
 export class CustomerController {
   public static async getCustomers(
-    _req: AuthenticatedRequest,
+    req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const customers = await Customer.find().lean();
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const filter: Record<string, unknown> = {};
+      if (tenantId) {
+        filter.tenantId = tenantId;
+      }
+
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 100));
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const skip = (page - 1) * limit;
+
+      const customers = await Customer.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
       res.json(customers);
     } catch (err: unknown) {
       next(err);
@@ -25,7 +40,11 @@ export class CustomerController {
   ): Promise<void> {
     const { id } = req.params;
     try {
-      const customer = await Customer.findById(id).lean();
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const query: Record<string, unknown> = { _id: id };
+      if (tenantId) query.tenantId = tenantId;
+
+      const customer = await Customer.findOne(query).lean();
       if (!customer) {
         return next(new NotFoundError('Customer not found.'));
       }
@@ -47,17 +66,26 @@ export class CustomerController {
     }
 
     try {
-      const existingCode = await Customer.findOne({ code: code.toUpperCase() });
+      const tenantId = (req as any).tenantId || req.user?.tenantId || 'default';
+      const codeQuery: Record<string, unknown> = { code: code.toUpperCase() };
+      const emailQuery: Record<string, unknown> = { email: email.toLowerCase() };
+      if (tenantId) {
+        codeQuery.tenantId = tenantId;
+        emailQuery.tenantId = tenantId;
+      }
+
+      const existingCode = await Customer.findOne(codeQuery);
       if (existingCode) {
         return next(new ValidationError(`Customer code [${code}] already exists.`));
       }
 
-      const existingEmail = await Customer.findOne({ email: email.toLowerCase() });
+      const existingEmail = await Customer.findOne(emailQuery);
       if (existingEmail) {
         return next(new ValidationError(`Customer email [${email}] is already registered.`));
       }
 
       const customer = await Customer.create({
+        tenantId,
         name,
         code: code.toUpperCase(),
         email: email.toLowerCase(),
@@ -86,7 +114,11 @@ export class CustomerController {
   ): Promise<void> {
     const { id } = req.params;
     try {
-      const customer = await Customer.findById(id);
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const query: Record<string, unknown> = { _id: id };
+      if (tenantId) query.tenantId = tenantId;
+
+      const customer = await Customer.findOne(query);
       if (!customer) {
         return next(new NotFoundError('Customer not found.'));
       }
@@ -104,7 +136,9 @@ export class CustomerController {
       delete updatableData.__v;
 
       if (code && code.toUpperCase() !== customer.code) {
-        const existingCode = await Customer.findOne({ code: code.toUpperCase() });
+        const codeQuery: Record<string, unknown> = { code: code.toUpperCase() };
+        if (tenantId) codeQuery.tenantId = tenantId;
+        const existingCode = await Customer.findOne(codeQuery);
         if (existingCode) {
           return next(new ValidationError(`Customer code [${code}] already exists.`));
         }
@@ -112,7 +146,9 @@ export class CustomerController {
       }
 
       if (email && email.toLowerCase() !== customer.email) {
-        const existingEmail = await Customer.findOne({ email: email.toLowerCase() });
+        const emailQuery: Record<string, unknown> = { email: email.toLowerCase() };
+        if (tenantId) emailQuery.tenantId = tenantId;
+        const existingEmail = await Customer.findOne(emailQuery);
         if (existingEmail) {
           return next(new ValidationError(`Customer email [${email}] is already registered.`));
         }
@@ -144,7 +180,11 @@ export class CustomerController {
   ): Promise<void> {
     const { id } = req.params;
     try {
-      const customer = await Customer.findById(id);
+      const tenantId = (req as any).tenantId || req.user?.tenantId;
+      const query: Record<string, unknown> = { _id: id };
+      if (tenantId) query.tenantId = tenantId;
+
+      const customer = await Customer.findOne(query);
       if (!customer) {
         return next(new NotFoundError('Customer not found.'));
       }
