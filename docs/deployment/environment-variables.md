@@ -26,4 +26,6 @@
 | `PAYSTACK_WEBHOOK_SECRET`| **Required**| Secret | Paystack webhook cryptographic validation signature. |
 | `STRIPE_SECRET_KEY` | **Required** | `sk_live_...` | Live Stripe secret gateway key. |
 | `STRIPE_WEBHOOK_SECRET` | **Required** | `whsec_...` | Stripe webhook cryptographic signing secret. |
+| `EXCHANGE_RATE_API_KEY` | Optional | Secret | API key for multi-currency live exchange rate updates. |
+| `EXCHANGE_RATE_PROVIDER`| Optional | `auto` | FX provider (`openexchangerates`, `exchangerate-api`, `frankfurter`, `auto`). |
 | `GEMINI_API_KEY` | Optional | Secret | Google Gemini Cloud AI Studio API key. |

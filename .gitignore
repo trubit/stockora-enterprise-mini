@@ -18,7 +18,7 @@ dist-ssr
 # Secrets and Environment — NEVER commit .env (only .env.example is committed)
 .env
 # NOTE: .env.example is intentionally NOT gitignored — it is the safe template
-
+.env.example
 # Local storage and file uploads (exclude runtime contents, preserve placeholders)
 uploads/*
 !uploads/.gitkeep
